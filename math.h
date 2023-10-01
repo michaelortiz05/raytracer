@@ -3,7 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-#include<iterator>
+#include <iterator>
 #include <cmath>
 #include <limits>
 #include "geometry.h"
