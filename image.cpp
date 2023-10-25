@@ -167,7 +167,7 @@ void Image::printObjects() {
 bool Image::isInShadow(const Point &intersection) {
     constexpr double bias = 1e-6;
     Vector biasVector = currentSun->direction * bias;
-    Ray shadowRay(intersection + biasVector.getVectorAsPoint(), currentSun->direction);
+    Ray shadowRay{intersection + biasVector.getVectorAsPoint(), currentSun->direction};
     Intersection i = getSphereCollision(shadowRay);
     return i.found;
 }
