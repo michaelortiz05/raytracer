@@ -1,33 +1,37 @@
 #include <fstream>
 #include <string>
 #include <sstream>
-#include <typeinfo>  
+#include <typeinfo>
 #include "image.h"
 #include "lodepng.h"
-
+#include <chrono>
 // Source: https://itecnote.com/tecnote/c-how-to-check-if-string-ends-with-txt/
-bool has_suffix(const std::string &str, const std::string &suffix) {
+bool has_suffix(const std::string &str, const std::string &suffix)
+{
     return str.size() >= suffix.size() &&
            str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
 // File IO source: learncpp.com
-int main(int argc, char *argv[]) {
-    std::ifstream inf{ argv[1]};
+int main(int argc, char *argv[])
+{
+    std::ifstream inf{argv[1]};
     std::vector<std::string> line;
     Image *img;
 
-    if (argc != 2) {
+    if (argc != 2)
+    {
         std::cerr << "No input file!\n";
         return 1;
     }
-    if (!inf) {
+    if (!inf)
+    {
         std::cerr << "Error opening file!\n";
         return 1;
     }
 
     while (inf)
-    {   
+    {
         line.clear();
         std::string word;
         std::string strInput;
@@ -35,12 +39,13 @@ int main(int argc, char *argv[]) {
         std::getline(inf, strInput);
         std::stringstream s(strInput);
 
-        while (s >> word)  
-           line.push_back(word);
+        while (s >> word)
+            line.push_back(word);
         if (line.empty())
             continue;
 
-        if (line[0] == "png") {
+        if (line[0] == "png")
+        {
             if (line.size() != 4 || typeid(line[3]) != typeid(std::string) || !has_suffix(line[3], ".png"))
                 break;
 
@@ -51,30 +56,34 @@ int main(int argc, char *argv[]) {
             // }
             img = new Image(std::stoi(line[1]), std::stoi(line[2]), line[3]);
             unsigned error = lodepng::encode(img->getName(), img->getPng(), img->getWidth(), img->getHeight());
-            if(error) std::cout << "encoder error " << error << ": "<< lodepng_error_text(error) << std::endl;
+            if (error)
+                std::cout << "encoder error " << error << ": " << lodepng_error_text(error) << std::endl;
         }
 
-        else if (line[0] == "sphere") {
-            if (line.size() != 5) 
+        else if (line[0] == "sphere")
+        {
+            if (line.size() != 5)
                 break;
-            
+
             // Grab sphere values
             double x = std::stof(line[1]);
             double y = std::stof(line[2]);
             double z = std::stof(line[3]);
             double r = std::stof(line[4]);
-            
+
             // Add sphere
-            img->addObject(x,y,z,r);
+            img->addObject(x, y, z, r);
         }
 
-        else if (line[0] == "color") {
+        else if (line[0] == "color")
+        {
             if (line.size() != 4)
                 break;
             img->setColor(std::stof(line[1]), std::stof(line[2]), std::stof(line[3]));
         }
 
-        else if (line[0] == "sun") {
+        else if (line[0] == "sun")
+        {
             if (line.size() != 4)
                 break;
 
@@ -84,13 +93,22 @@ int main(int argc, char *argv[]) {
             double z = std::stof(line[3]);
             img->setSun(x, y, z);
         }
-        
     }
-    img->printObjects();
+    // img->printObjects();
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     img->castRays();
-    if (img->getName() != "") {
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    std::cout << "Elapsed time = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
+    begin = std::chrono::steady_clock::now();
+    img->castRays_parallel();
+    end = std::chrono::steady_clock::now();
+    std::cout << "Elapsed time = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
+
+    if (img->getName() != "")
+    {
         unsigned error = lodepng::encode(img->getName(), img->getPng(), img->getWidth(), img->getHeight());
-        if(error) std::cout << "encoder error " << error << ": "<< lodepng_error_text(error) << std::endl;
+        if (error)
+            std::cout << "encoder error " << error << ": " << lodepng_error_text(error) << std::endl;
     }
     delete img;
 }

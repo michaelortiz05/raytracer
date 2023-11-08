@@ -35,6 +35,7 @@ class Image {
         void setSun(double x, double y, double z);
         void printSun();
         void castRays();
+        void castRays_parallel();
         void printObjects();
         static void convertLinearTosRGB(Color &c);
 };

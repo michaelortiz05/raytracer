@@ -1,0 +1,6 @@
+png 100 80 sun.png
+
+sphere 1 -0.8 -1 0.5
+sphere 0 0 -1 0.3
+
+sun 1 1 1

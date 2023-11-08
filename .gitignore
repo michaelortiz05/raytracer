@@ -1,2 +1,6 @@
 *.png
 *.DS_Store
+
+program
+
+settings.json
