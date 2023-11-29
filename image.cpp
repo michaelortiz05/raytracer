@@ -109,57 +109,65 @@ void Image::castRays() {
     }
 }
 
+// cuda cast rays
+__global__ void castRaysKernel(cudaImage* image) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x >= image->width || y >= image->height)
+        return;
+
+    double sx = (2.0 * x - image->width) / image->maxDim;
+    double sy = (image->height - 2.0 * y) / image->maxDim;
+    // Vector direction = *forward + sx * *right + sy * *up;
+    // direction.normalize();
+    // Ray ray = Ray{*eye, direction};
+    // Intersection intersection = image->getSphereCollision(ray);
+    
+    // if (intersection.found == true && intersection.t > 0.0)
+    // {
+    //     Vector normal = computeSphereNormal(intersection.p, intersection.center);
+    //     image->computeColor(normal, intersection.c, intersection.p);
+    //     output[y * width + x] = intersection.c; // Storing result in the output array
+    // }
+}
+
 void cudaRaytracer(cudaImage *hostImage) {
     const int BLOCK_SIZE = 16;
     cudaImage *deviceImage;
     cudaError_t status = cudaMalloc((void**)&deviceImage, sizeof(cudaImage));
     if (status != cudaSuccess) {
-        // Handle the error, e.g., by printing an error message
         std::cerr << "cudaMalloc failed: " << cudaGetErrorString(status) << std::endl;
         return;
     }
+
     status = cudaMemcpy(deviceImage, hostImage, sizeof(cudaImage), cudaMemcpyHostToDevice);
     if (status != cudaSuccess) {
-        // Handle the error
         std::cerr << "cudaMemcpy failed: " << cudaGetErrorString(status) << std::endl;
+        cudaFree(deviceImage);  // Free the memory in case of error
         return;
     }
-    dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE); // 16x16 threads per block
+
+    dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
 
     // Calculate number of blocks along X and Y axis
     dim3 numBlocks((hostImage->width + BLOCK_SIZE - 1) / BLOCK_SIZE, 
-                (hostImage->height + BLOCK_SIZE - 1) / BLOCK_SIZE);
+                   (hostImage->height + BLOCK_SIZE - 1) / BLOCK_SIZE);
 
-    // Call kernel here 
-    // ...
+    // Call kernel here
+    castRaysKernel<<<numBlocks, threadsPerBlock>>>(deviceImage);
     
-    cudaDeviceSynchronize();
-    cudaFree(deviceImage);
+    cudaDeviceSynchronize();  // Wait for the kernel to finish
+
+    status = cudaMemcpy(hostImage, deviceImage, sizeof(cudaImage), cudaMemcpyDeviceToHost);
+    if (status != cudaSuccess) {
+        std::cerr << "cudaMemcpy failed: " << cudaGetErrorString(status) << std::endl;
+        cudaFree(deviceImage);  // Free the memory in case of error
+        return;
+    }
+
+    cudaFree(deviceImage);  // Free the device memory
 }
-
-// cuda cast rays
-// __global__ void castRaysKernel(Vector *forward, Vector *right, Vector *up, Point *eye, int width, int height, double maxDim, Color *output, Image *image)
-// {
-//     int x = blockIdx.x * blockDim.x + threadIdx.x;
-//     int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-//     if (x >= width || y >= height)
-//         return;
-
-//     double sx = (2.0 * x - width) / maxDim;
-//     double sy = (height - 2.0 * y) / maxDim;
-//     Vector direction = *forward + sx * *right + sy * *up;
-//     direction.normalize();
-//     Ray ray = Ray{*eye, direction};
-//     Intersection intersection = image->getSphereCollision(ray);
-    
-//     if (intersection.found == true && intersection.t > 0.0)
-//     {
-//         Vector normal = computeSphereNormal(intersection.p, intersection.center);
-//         image->computeColor(normal, intersection.c, intersection.p);
-//         output[y * width + x] = intersection.c; // Storing result in the output array
-//     }
-// }
 
 // return the ray-sphere collision
 Intersection Image::getSphereCollision(const Ray &ray) const {

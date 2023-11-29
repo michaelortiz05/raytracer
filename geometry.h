@@ -1,5 +1,6 @@
 #ifndef GEOMETRY_H
 #define GEOMETRY_H
+#include <cuda_runtime.h>
 #include "math.h"
 
 // constants 
@@ -93,7 +94,7 @@ class Vector {
 };
 
 // cuda coordinates
-struct cudaCoordinates{
+struct __host__ __device__ cudaCoordinates{
     double x, y, z;
 };
 
@@ -101,7 +102,7 @@ struct cudaCoordinates{
 double cudaMag(cudaCoordinates c);
 
 // RGB color struct
-struct Color {
+struct __host__ __device__ Color {
     double r = 1.0;
     double g = 1.0;
     double b = 1.0;
@@ -122,7 +123,7 @@ struct Sun {
 };
 
 // cuda sun light source
-struct cudaSun {
+struct __host__ __device__ cudaSun {
     cudaCoordinates direction;
     Color c;
 };
