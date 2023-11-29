@@ -1,6 +1,7 @@
 #ifndef GEOMETRY_H
 #define GEOMETRY_H
 #include "math.h"
+#include <cuda_runtime.h>
 
 // constants 
 namespace constants {
@@ -51,19 +52,19 @@ class Vector {
         double mag() const;
         Point getVectorAsPoint() const;
         void print() const;
-        void normalize();
+        __host__ __device__ void normalize();
 
         // Friend operator overloads
-        friend Vector operator*(const Vector &v1, const Vector &v2);
+        __host__ __device__ friend Vector operator*(const Vector &v1, const Vector &v2);
         friend Vector operator/(const Vector &v1, const Vector &v2);
-        friend Vector operator+(const Vector &v1, const Vector &v2);
-        friend Vector operator+(const Vector &v, double c);
+        __host__ __device__ friend Vector operator+(const Vector &v1, const Vector &v2);
+        __host__ __device__ friend Vector operator+(const Vector &v, double c);
         friend Vector operator-(const Vector &v1, const Vector &v2);
-        friend Vector operator+(double c, const Vector &v);
+        __host__ __device__ friend Vector operator+(double c, const Vector &v);
         friend Vector operator-(double c, const Vector &v);
         friend Vector operator-(const Vector &v, double c);
-        friend Vector operator*(const Vector &v, double c);
-        friend Vector operator*(double c, const Vector &v);
+        __host__ __device__ friend Vector operator*(const Vector &v, double c);
+        __host__ __device__ friend Vector operator*(double c, const Vector &v);
         friend Vector operator/(const Vector &v, double c);
         friend Vector operator/(double c, const Vector &v);
 };

@@ -7,6 +7,7 @@
 #include <cmath>
 #include <limits>
 #include "geometry.h"
+#include <cuda_runtime.h>
 
 struct Ray {
     Point origin;
@@ -26,7 +27,6 @@ inline Point operator*(double scalar, const Point &p) {
 }
 
 double dot(const Vector& v1, const Vector& v2);
-Vector computeSphereNormal(const Point &p1, const Point &c);
+__host__ __device__ Vector computeSphereNormal(const Point &p1, const Point &c);
 double clamp(double value, double min_value, double max_value);
-void swap(auto &a, auto &b);
 #endif

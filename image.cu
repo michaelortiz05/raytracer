@@ -130,8 +130,78 @@ void Image::castRays_parallel()
     }
 }
 
+__global__ void castRaysKernel(Vector *forward, Vector *right, Vector *up, Point *eye, int width, int height, double maxDim, Color *output, Image *image)
+{
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x >= width || y >= height)
+        return;
+
+    double sx = (2.0 * x - width) / maxDim;
+    double sy = (height - 2.0 * y) / maxDim;
+    Vector direction = *forward + sx * *right + sy * *up;
+    direction.normalize();
+    Ray ray = Ray{*eye, direction};
+    Intersection intersection = image->getSphereCollision(ray);
+    
+    if (intersection.found == true && intersection.t > 0.0)
+    {
+        Vector normal = computeSphereNormal(intersection.p, intersection.center);
+        image->computeColor(normal, intersection.c, intersection.p);
+        output[y * width + x] = intersection.c; // Storing result in the output array
+    }
+}
+
+
+void Image::castRays_CUDA()
+{
+    Color *device_output;
+    Vector *device_forward, *device_right, *device_up;
+    Point *device_eye;
+    Image *device_image;
+
+    // Allocate memory on the device
+    cudaMalloc(&device_output, width * height * sizeof(Color));
+    cudaMalloc(&device_forward, sizeof(Vector));
+    cudaMalloc(&device_right, sizeof(Vector));
+    cudaMalloc(&device_up, sizeof(Vector));
+    cudaMalloc(&device_eye, sizeof(Point));
+    cudaMalloc(&device_image, sizeof(Image));
+
+    // Copy data from host to device
+    cudaMemcpy(device_forward, forward, sizeof(Vector), cudaMemcpyHostToDevice);
+    cudaMemcpy(device_right, right, sizeof(Vector), cudaMemcpyHostToDevice);
+    cudaMemcpy(device_up, up, sizeof(Vector), cudaMemcpyHostToDevice);
+    cudaMemcpy(device_eye, eye, sizeof(Point), cudaMemcpyHostToDevice);
+    cudaMemcpy(device_image, this, sizeof(Image), cudaMemcpyHostToDevice);
+
+    // Define block size and grid size
+    dim3 blockSize(16, 16); // Adjust these values as needed for your GPU
+    dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
+
+    // Launch the kernel
+    castRaysKernel<<<gridSize, blockSize>>>(device_forward, device_right, device_up, device_eye, width, height, maxDim, device_output, device_image);
+
+    // Copy the result back to host
+    Color *host_output = new Color[width * height];
+    cudaMemcpy(host_output, device_output, width * height * sizeof(Color), cudaMemcpyDeviceToHost);
+
+    // Use host_output for further processing or displaying the image
+
+    // Free device memory
+    cudaFree(device_output);
+    cudaFree(device_forward);
+    cudaFree(device_right);
+    cudaFree(device_up);
+    cudaFree(device_eye);
+
+    // Free host memory
+    delete[] host_output;
+}
+
 // return the ray-sphere collision
-Intersection Image::getSphereCollision(const Ray &ray) const
+__host__ __device__ Intersection Image::getSphereCollision(const Ray &ray) const
 {
     Intersection intersection;
     for (auto &object : objects)
@@ -174,7 +244,7 @@ void Image::convertLinearTosRGB(Color &c)
 }
 
 // compute color with lambert shading
-void Image::computeColor(Vector &normal, Color &c, Point &p)
+__host__ __device__ void Image::computeColor(Vector &normal, Color &c, Point &p)
 {
     if (currentSun != nullptr && !isInShadow(p))
     {
@@ -213,7 +283,7 @@ void Image::printObjects()
 }
 
 // check if a point is in shadow
-bool Image::isInShadow(const Point &intersection)
+__host__ __device__ bool Image::isInShadow(const Point &intersection)
 {
     constexpr double bias = 1e-6;
     Vector biasVector = currentSun->direction * bias;
@@ -231,3 +301,4 @@ void Image::colorPixel(int x, int y, Color &c)
     png[((y * width) + x) * 4 + 2] = static_cast<unsigned char>(c.b * 255.0);
     png[((y * width) + x) * 4 + 3] = static_cast<unsigned char>(c.alpha * 255.0);
 }
+

@@ -1,7 +1,7 @@
 #include "math.h"
 
 // add two vectors
-Vector operator+(const Vector &v1, const Vector &v2) {
+__host__ __device__ Vector operator+(const Vector &v1, const Vector &v2) {
     return Vector(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
 }
 
@@ -11,7 +11,7 @@ Vector operator-(const Vector &v1, const Vector &v2) {
 }
 
 // element-wise multiply vectors
-Vector operator*(const Vector &v1, const Vector &v2) {
+__host__ __device__ Vector operator*(const Vector &v1, const Vector &v2) {
     return Vector(v1.x * v2.x, v1.y * v2.y, v1.z * v2.z);
 }
 
@@ -25,12 +25,12 @@ Vector operator/(const Vector &v1, const Vector &v2) {
 }
 
 // add a constant to a vector
-Vector operator+(const Vector &v, double c) {
+__host__ __device__ Vector operator+(const Vector &v, double c) {
     return Vector(v.x + c, v.y + c, v.z + c);
 }
 
 // add a constant to a vector
-Vector operator+(double c, const Vector &v) {
+__host__ __device__ Vector operator+(double c, const Vector &v) {
     return Vector(v.x + c, v.y + c, v.z + c);
 }
 
@@ -45,12 +45,12 @@ Vector operator-(const Vector &v, double c) {
 }
 
 // scalar multiply a vector
-Vector operator*(const Vector &v, double c) {
+__host__ __device__ Vector operator*(const Vector &v, double c) {
     return Vector(v.x * c, v.y * c, v.z * c);
 }
 
 // scalar multiply a vector
-Vector operator*(double c, const Vector &v) {
+__host__ __device__ Vector operator*(double c, const Vector &v) {
     return Vector(v.x * c, v.y * c, v.z * c);
 }
 
@@ -105,7 +105,7 @@ double Vector::mag() const {
 }
 
 // normalize vector
-void Vector::normalize() {
+__host__ __device__ void Vector::normalize() {
     double mag = this->mag();  
 
     if (mag == 0.0) {
@@ -132,16 +132,10 @@ double clamp(double value, double min_value, double max_value) {
 }
 
 // compute the normal of a point of a sphere
-Vector computeSphereNormal(const Point &p1, const Point &c) {
+__host__ __device__ Vector computeSphereNormal(const Point &p1, const Point &c) {
     Vector normal(p1 - c);
     normal.normalize();
     return normal;
 }
 
-// Helper swap function
-void swap(auto &a, auto &b) {
-    auto temp = a;
-    a = b;
-    b = temp;
-}
 

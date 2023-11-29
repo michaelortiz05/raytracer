@@ -1,6 +1,7 @@
 #ifndef IMAGE_H
 #define IMAGE_H
 #include "math.h"
+#include <cuda_runtime.h>
 std::ostream& operator<<(std::ostream& out, const Color& c);
 
 // Image class for rendering the scene
@@ -18,13 +19,13 @@ class Image {
         Vector* forward;
         Vector* right;
         Vector* up;
-        Intersection getSphereCollision(const Ray &ray) const;
         void colorPixel(int x, int y, Color &c);
-        void computeColor(Vector& normal, Color& c, Point& p);
-        bool isInShadow(const Point &intersection);
     public:
         Image(int w = 0, int h = 0, std::string n = ""); 
         ~Image();
+        __host__ __device__ Intersection getSphereCollision(const Ray &ray) const;
+        __host__ __device__ void computeColor(Vector& normal, Color& c, Point& p);
+        __host__ __device__ bool isInShadow(const Point &intersection);
         int getHeight();
         Color getColor();
         int getWidth();
@@ -38,5 +39,6 @@ class Image {
         void castRays_parallel();
         void printObjects();
         static void convertLinearTosRGB(Color &c);
+        void castRays_CUDA();
 };
 #endif
