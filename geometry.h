@@ -68,6 +68,12 @@ class Vector {
         friend Vector operator/(double c, const Vector &v);
 };
 
+typedef struct {
+    double x, y, z;
+} CudaVector;
+
+
+
 // RGB color struct
 struct Color {
     double r = 1.0;

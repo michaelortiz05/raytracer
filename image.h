@@ -38,4 +38,8 @@ class Image {
         void printObjects();
         static void convertLinearTosRGB(Color &c);
 };
+
+typedef struct {
+
+} ImageCuda;
 #endif
