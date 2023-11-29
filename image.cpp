@@ -148,9 +148,8 @@ void Image::processChunk(int startY, int endY) {
     }
 }
 
-void Image::castRays_threaded() {
-    int numThreads = 16;
-    std::vector<std::thread> threads(16);
+void Image::castRays_threaded(int numThreads) {
+    std::vector<std::thread> threads(numThreads);
 
     int chunkSize = height / numThreads;
 
