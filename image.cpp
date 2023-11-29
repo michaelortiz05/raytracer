@@ -26,6 +26,24 @@ Image::~Image() {
 // Height getter
 int Image::getHeight() {return height;}
 
+// Max Dim getter
+double Image::getMaxDim() {return maxDim;}
+
+// sun getter
+Sun* Image::getSun() {return currentSun;}
+
+// get eye
+Point* Image::getEye() {return eye;}
+
+// get forward
+Vector* Image::getForward() {return forward;}
+
+// get right
+Vector* Image::getRight() {return right;}
+
+// get up
+Vector* Image::getUp() {return up;}
+
 // Width getter
 int Image::getWidth() {return width;}
 
@@ -90,6 +108,30 @@ void Image::castRays() {
         }
     }
 }
+
+// cuda cast rays
+// __global__ void castRaysKernel(Vector *forward, Vector *right, Vector *up, Point *eye, int width, int height, double maxDim, Color *output, Image *image)
+// {
+//     int x = blockIdx.x * blockDim.x + threadIdx.x;
+//     int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+//     if (x >= width || y >= height)
+//         return;
+
+//     double sx = (2.0 * x - width) / maxDim;
+//     double sy = (height - 2.0 * y) / maxDim;
+//     Vector direction = *forward + sx * *right + sy * *up;
+//     direction.normalize();
+//     Ray ray = Ray{*eye, direction};
+//     Intersection intersection = image->getSphereCollision(ray);
+    
+//     if (intersection.found == true && intersection.t > 0.0)
+//     {
+//         Vector normal = computeSphereNormal(intersection.p, intersection.center);
+//         image->computeColor(normal, intersection.c, intersection.p);
+//         output[y * width + x] = intersection.c; // Storing result in the output array
+//     }
+// }
 
 // return the ray-sphere collision
 Intersection Image::getSphereCollision(const Ray &ray) const {
@@ -179,5 +221,20 @@ void Image::colorPixel(int x, int y, Color &c) {
     png[((y * width) + x)*4 + 1] = static_cast<unsigned char>(c.g * 255.0);
     png[((y * width) + x)*4 + 2] = static_cast<unsigned char>(c.b * 255.0);
     png[((y * width) + x)*4 + 3] = static_cast<unsigned char>(c.alpha * 255.0);
+}
+
+// convert image class to cuda compatible struct 
+void convertImageToCudaImage(Image &i, cudaImage &ci) {
+    ci.width = i.getWidth();
+    ci.height = i.getHeight();
+    ci.maxDim = i.getMaxDim();
+    ci.currentColor = i.getColor();
+    Sun* s = i.getSun();
+    ci.currentSun.c = s->c;
+    ci.currentSun.direction = cudaCoordinates{s->direction.getX(), s->direction.getY(), s->direction.getZ()};
+    ci.eye = cudaCoordinates{i.getEye()->x, i.getEye()->y, i.getEye()->z};
+    ci.forward = cudaCoordinates{i.getForward()->getX(), i.getForward()->getY(), i.getForward()->getZ()};
+    ci.right = cudaCoordinates{i.getRight()->getX(), i.getRight()->getY(), i.getRight()->getZ()};
+    ci.up = cudaCoordinates{i.getUp()->getX(), i.getUp()->getY(), i.getUp()->getZ()};
 }
 

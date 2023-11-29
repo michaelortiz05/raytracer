@@ -104,6 +104,11 @@ double Vector::mag() const {
     return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2));
 }
 
+// compute mag of cuda coordinates
+double cudaMag(cudaCoordinates c) {
+    return sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
+}
+
 // normalize vector
 void Vector::normalize() {
     double mag = this->mag();  

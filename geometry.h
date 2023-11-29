@@ -38,6 +38,30 @@ struct Point {
     }
 };
 
+// CUDA compatible point
+struct cudaPoint {
+    double x = 0.0;
+    double y = 0.0;
+    double z = 0.0;
+
+    __host__ __device__ cudaPoint operator+(const cudaPoint &p) const {
+        return Point{x + p.x, y + p.y, z + p.z};
+    }
+
+    __host__ __device__ cudaPoint operator-(const cudaPoint &p) const {
+        return Point{x - p.x, y - p.y, z - p.z};
+    }
+
+    __host__ __device__ cudaPoint operator*(double scalar) const {
+        return Point{x * scalar, y * scalar, z * scalar};
+    }
+
+    // Removed error handling for division by zero for CUDA compatibility
+    __host__ __device__ cudaPoint operator/(double scalar) const {
+        return Point{x / scalar, y / scalar, z / scalar};
+    }
+};
+
 // vector class definining a vector and vector operations
 class Vector {
     private:
@@ -68,18 +92,20 @@ class Vector {
         friend Vector operator/(double c, const Vector &v);
 };
 
-typedef struct {
+// cuda coordinates
+struct cudaCoordinates{
     double x, y, z;
-} CudaVector;
+};
 
-
+// cuda magnitude computation
+double cudaMag(cudaCoordinates c);
 
 // RGB color struct
 struct Color {
     double r = 1.0;
     double g = 1.0;
     double b = 1.0;
-    double alpha = constants::alpha;
+    double alpha = 1.0;
 };
 
 // Sphere with center c, radius r, and a color
@@ -94,4 +120,11 @@ struct Sun {
     Vector direction;
     Color c;
 };
+
+// cuda sun light source
+struct cudaSun {
+    cudaCoordinates direction;
+    Color c;
+};
+
 #endif

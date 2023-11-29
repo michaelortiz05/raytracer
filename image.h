@@ -26,8 +26,14 @@ class Image {
         Image(int w = 0, int h = 0, std::string n = ""); 
         ~Image();
         int getHeight();
+        Point* getEye();
+        Vector* getForward();
+        Vector* getRight();
+        Vector* getUp();
         Color getColor();
         int getWidth();
+        double getMaxDim();
+        Sun* getSun();
         std::vector<unsigned char> const &getPng();
         std::string const &getName();
         void setColor(double r, double g, double b, double a = constants::alpha);
@@ -39,7 +45,23 @@ class Image {
         static void convertLinearTosRGB(Color &c);
 };
 
-typedef struct {
+// cuda compatible image struct
+struct cudaImage {
+    int width;
+    int height;
+    double maxDim;
+    Color currentColor;
+    cudaSun currentSun;
+    cudaCoordinates eye;
+    cudaCoordinates forward;
+    cudaCoordinates right;
+    cudaCoordinates up;
+};
 
-} ImageCuda;
+// convert image to cuda compatible image
+void convertImageToCudaImage(Image &i, cudaImage &ci); // host
+
+// convert sun to cuda sun
+void convertSunToCudaSun(Sun &s, cudaSun &cs);
+
 #endif
