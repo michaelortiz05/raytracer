@@ -109,6 +109,34 @@ void Image::castRays() {
     }
 }
 
+void cudaRaytracer(cudaImage *hostImage) {
+    const int BLOCK_SIZE = 16;
+    cudaImage *deviceImage;
+    cudaError_t status = cudaMalloc((void**)&deviceImage, sizeof(cudaImage));
+    if (status != cudaSuccess) {
+        // Handle the error, e.g., by printing an error message
+        std::cerr << "cudaMalloc failed: " << cudaGetErrorString(status) << std::endl;
+        return;
+    }
+    status = cudaMemcpy(deviceImage, hostImage, sizeof(cudaImage), cudaMemcpyHostToDevice);
+    if (status != cudaSuccess) {
+        // Handle the error
+        std::cerr << "cudaMemcpy failed: " << cudaGetErrorString(status) << std::endl;
+        return;
+    }
+    dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE); // 16x16 threads per block
+
+    // Calculate number of blocks along X and Y axis
+    dim3 numBlocks((hostImage->width + BLOCK_SIZE - 1) / BLOCK_SIZE, 
+                (hostImage->height + BLOCK_SIZE - 1) / BLOCK_SIZE);
+
+    // Call kernel here 
+    // ...
+    
+    cudaDeviceSynchronize();
+    cudaFree(deviceImage);
+}
+
 // cuda cast rays
 // __global__ void castRaysKernel(Vector *forward, Vector *right, Vector *up, Point *eye, int width, int height, double maxDim, Color *output, Image *image)
 // {

@@ -1,6 +1,7 @@
 #ifndef IMAGE_H
 #define IMAGE_H
 #include "math.h"
+#include <cuda_runtime.h>
 std::ostream& operator<<(std::ostream& out, const Color& c);
 
 // Image class for rendering the scene
@@ -63,5 +64,8 @@ void convertImageToCudaImage(Image &i, cudaImage &ci); // host
 
 // convert sun to cuda sun
 void convertSunToCudaSun(Sun &s, cudaSun &cs);
+
+// cuda raytracer setup
+void cudaRaytracer(cudaImage *ci);
 
 #endif

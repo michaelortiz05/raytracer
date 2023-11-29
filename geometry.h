@@ -38,29 +38,29 @@ struct Point {
     }
 };
 
-// CUDA compatible point
-struct cudaPoint {
-    double x = 0.0;
-    double y = 0.0;
-    double z = 0.0;
+// // CUDA compatible point
+// struct cudaPoint {
+//     double x = 0.0;
+//     double y = 0.0;
+//     double z = 0.0;
 
-    __host__ __device__ cudaPoint operator+(const cudaPoint &p) const {
-        return Point{x + p.x, y + p.y, z + p.z};
-    }
+//     __host__ __device__ cudaPoint operator+(const cudaPoint &p) const {
+//         return Point{x + p.x, y + p.y, z + p.z};
+//     }
 
-    __host__ __device__ cudaPoint operator-(const cudaPoint &p) const {
-        return Point{x - p.x, y - p.y, z - p.z};
-    }
+//     __host__ __device__ cudaPoint operator-(const cudaPoint &p) const {
+//         return Point{x - p.x, y - p.y, z - p.z};
+//     }
 
-    __host__ __device__ cudaPoint operator*(double scalar) const {
-        return Point{x * scalar, y * scalar, z * scalar};
-    }
+//     __host__ __device__ cudaPoint operator*(double scalar) const {
+//         return Point{x * scalar, y * scalar, z * scalar};
+//     }
 
-    // Removed error handling for division by zero for CUDA compatibility
-    __host__ __device__ cudaPoint operator/(double scalar) const {
-        return Point{x / scalar, y / scalar, z / scalar};
-    }
-};
+//     // Removed error handling for division by zero for CUDA compatibility
+//     __host__ __device__ cudaPoint operator/(double scalar) const {
+//         return Point{x / scalar, y / scalar, z / scalar};
+//     }
+// };
 
 // vector class definining a vector and vector operations
 class Vector {

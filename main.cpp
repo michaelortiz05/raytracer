@@ -88,6 +88,8 @@ int main(int argc, char *argv[]) {
     }
     img->printObjects();
     img->castRays();
+    cudaImage ci;
+    convertImageToCudaImage(*img, ci);
     if (img->getName() != "") {
         unsigned error = lodepng::encode(img->getName(), img->getPng(), img->getWidth(), img->getHeight());
         if(error) std::cout << "encoder error " << error << ": "<< lodepng_error_text(error) << std::endl;
