@@ -1,5 +1,5 @@
 #include "image.h"
-
+#include <thread>
 // printing overload for color
 std::ostream &operator<<(std::ostream &out, const Color &c)
 {
@@ -127,6 +127,41 @@ void Image::castRays_parallel()
                 colorPixel(x, y, intersection.c);
             }
         }
+    }
+}
+
+void Image::processChunk(int startY, int endY) {
+    for (int y = startY; y < endY; y++) {
+        for (int x = 0; x < width; x++) {
+            double sx = (2.0 * x - width) / maxDim;
+            double sy = (height - 2.0 * y) / maxDim;
+            Vector direction = *forward + sx * *right + sy * *up;
+            direction.normalize();
+            const Ray ray = Ray{*eye, direction};
+            Intersection intersection = getSphereCollision(ray);
+            if (intersection.found == true && intersection.t > 0.0) {
+                Vector normal = computeSphereNormal(intersection.p, intersection.center);
+                computeColor(normal, intersection.c, intersection.p);
+                colorPixel(x, y, intersection.c);
+            }
+        }
+    }
+}
+
+void Image::castRays_threaded() {
+    int numThreads = 16;
+    std::vector<std::thread> threads(16);
+
+    int chunkSize = height / numThreads;
+
+    for (int i = 0; i < numThreads; i++) {
+        int startY = i * chunkSize;
+        int endY = (i != numThreads - 1) ? (i + 1) * chunkSize : height;
+        threads[i] = std::thread(&Image::processChunk, this, startY, endY);
+    }
+
+    for (auto &thread : threads) {
+        thread.join();
     }
 }
 

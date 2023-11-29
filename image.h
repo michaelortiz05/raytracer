@@ -38,5 +38,7 @@ class Image {
         void castRays_parallel();
         void printObjects();
         static void convertLinearTosRGB(Color &c);
+        void processChunk(int start, int end);
+        void castRays_threaded();
 };
 #endif

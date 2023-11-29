@@ -5,7 +5,7 @@
 // constants 
 namespace constants {
     constexpr double alpha = 1.0;
-};
+}
 
 // basic struct for point and point operations
 struct Point {
