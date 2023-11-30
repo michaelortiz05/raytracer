@@ -4,6 +4,7 @@
 #include <typeinfo>  
 #include "image.h"
 #include "lodepng.h"
+#include <chrono>
 
 // Source: https://itecnote.com/tecnote/c-how-to-check-if-string-ends-with-txt/
 bool has_suffix(const std::string &str, const std::string &suffix) {
@@ -90,10 +91,11 @@ int main(int argc, char *argv[]) {
     // img->castRays();
     cudaImage ci;
     convertImageToCudaImage(*img, ci);
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     cudaRaytracer(&ci);
-    // for (int i = 0; i < (ci.height * ci.width * 4); i++) {
-    //    std::cout << ci.png[i] <<  " ";
-    // }
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    std::cout << "Elapsed time = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << 
+        "[μs] (" << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 10e5 << "s)" << std::endl;
     if (img->getName() != "") {
         unsigned error = lodepng::encode(img->getName(), ci.png, img->getWidth(), img->getHeight());
         if(error) std::cout << "encoder error " << error << ": "<< lodepng_error_text(error) << std::endl;
