@@ -3,6 +3,14 @@
 #include <cmath>
 /*******CUDA*********/
 __constant__ cudaSun constSun;
+__constant__ int height;
+__constant__ int width;
+__constant__ cudaCoordinates eye;
+__constant__ cudaCoordinates forward;
+__constant__ cudaCoordinates right;
+__constant__ cudaCoordinates up;
+__constant__ int maxDim;
+__constant__ int numSpheres;
 
 // compute mag of cuda coordinates
 double __host__  __device__ cudaMag(cudaCoordinates &c) {
@@ -233,30 +241,30 @@ __global__ void castRaysKernel(cudaImage* image) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (x >= image->width || y >= image->height) return;
+    if (x >= width || y >= height) return;
 
-    double sx = (2.0 * x - image->width) / image->maxDim;
-    double sy = (image->height - 2.0 * y) / image->maxDim;
-    cudaCoordinates direction = image->forward + sx * image->right + sy * image->up;
+    double sx = (2.0 * x - width) / image->maxDim;
+    double sy = (height - 2.0 * y) / image->maxDim;
+    cudaCoordinates direction = forward + sx * right + sy * up;
     cudaNormalize(direction);
 
-    cudaCoordinates rayOrigin = image->eye;
+    // cudaCoordinates rayOrigin = eye;
     cudaIntersection closestIntersection;
     closestIntersection.found = false;
     closestIntersection.t = DBL_MAX;
 
     // Iterate over chunks of spheres
-    for (int i = 0; i < image->numSpheres; i += sharedSpheresCount) {
+    for (int i = 0; i < numSpheres; i += sharedSpheresCount) {
         // Load a chunk of spheres into shared memory
         int loadIndex = threadIdx.x + threadIdx.y * blockDim.x;
-        if (loadIndex < sharedSpheresCount && (i + loadIndex) < image->numSpheres) {
+        if (loadIndex < sharedSpheresCount && (i + loadIndex) < numSpheres) {
             sharedSpheres[loadIndex] = image->spheres[i + loadIndex];
         }
         __syncthreads();
 
         // Check for intersections with spheres in shared memory
-        int chunkSize = min(sharedSpheresCount, image->numSpheres - i);
-        cudaIntersection intersection = cudaGetSphereCollision(sharedSpheres, chunkSize, rayOrigin, direction);
+        int chunkSize = min(sharedSpheresCount, numSpheres - i);
+        cudaIntersection intersection = cudaGetSphereCollision(sharedSpheres, chunkSize, eye, direction);
 
         // Update closest intersection if needed
         if (intersection.found && intersection.t < closestIntersection.t) {
@@ -270,45 +278,39 @@ __global__ void castRaysKernel(cudaImage* image) {
         cudaCoordinates normal = cudaComputeSphereNormal(closestIntersection.p, closestIntersection.center);
         // Note: cudaIsInShadow now checks against the sharedSpheres
         if (!cudaIsInShadow(sharedSpheres, min(sharedSpheresCount, image->numSpheres), constSun, closestIntersection.p)) {
-            cudaComputeColor(sharedSpheres, min(sharedSpheresCount, image->numSpheres), constSun, normal, closestIntersection.c, closestIntersection.p, image->eye);
-            cudaColorPixel(image->png, image->width, image->height, x, y, closestIntersection.c);
+            cudaComputeColor(sharedSpheres, min(sharedSpheresCount, image->numSpheres), constSun, normal, closestIntersection.c, closestIntersection.p, eye);
+            cudaColorPixel(image->png, width, height, x, y, closestIntersection.c);
         } else {
             // Handle the case where the point is in shadow
             Color c = {0.0,0.0,0.0,0.0};
-            cudaColorPixel(image->png, image->width, image->height, x, y, c);
+            cudaColorPixel(image->png, width, height, x, y, c);
         }
     }
 }
 
-
-// __global__ void castRaysKernel(cudaImage* image) {
-//     int x = blockIdx.x * blockDim.x + threadIdx.x;
-//     int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-//     if (x >= image->width || y >= image->height)
-//         return;
-
-//     double sx = (2.0 * x - image->width) / image->maxDim;
-//     double sy = (image->height - 2.0 * y) / image->maxDim;
-//     cudaCoordinates direction = image->forward + sx * image->right + sy * image->up;
-//     cudaNormalize(direction);
-//     cudaCoordinates rayOrigin = image->eye; // Ray ray = Ray{*eye, direction};
-//     cudaIntersection intersection = cudaGetSphereCollision(image->spheres, image->numSpheres, rayOrigin, direction);    
-//     if (intersection.found == true && intersection.t > 0.0)
-//     {
-//         cudaCoordinates normal = cudaComputeSphereNormal(intersection.p, intersection.center);
-//         cudaComputeColor(image->spheres, image->numSpheres, image->currentSun, normal, intersection.c, intersection.p, image->eye);// image->computeColor(normal, intersection.c, intersection.p);
-//         cudaColorPixel(image->png, image->width, image->height, x, y, intersection.c); // color pixel
-//     }
-// }
-
 void cudaRaytracer(cudaImage *hostImage) {
     const int BLOCK_SIZE = 16;
     cudaSun hostSun;
+    int hostHeight = hostImage->height;
+    int hostWidth = hostImage->width;
+    int hostDim = hostImage->maxDim;
+    int hostSpheres = hostImage->numSpheres;
+    cudaCoordinates hostEye = hostImage->eye;
+    cudaCoordinates hostForward = hostImage->forward;
+    cudaCoordinates hostRight = hostImage->right;
+    cudaCoordinates hostUp = hostImage->up;
     hostSun.direction = hostImage->currentSun.direction;
     hostSun.c = hostImage->currentSun.c;
     cudaNormalize(hostSun.direction);
     cudaMemcpyToSymbol(constSun, &hostSun, sizeof(cudaSun));
+    cudaMemcpyToSymbol(height, &hostHeight, sizeof(int));
+    cudaMemcpyToSymbol(maxDim, &hostDim, sizeof(int));
+    cudaMemcpyToSymbol(width, &hostWidth, sizeof(int));
+    cudaMemcpyToSymbol(numSpheres, &hostSpheres, sizeof(int));
+    cudaMemcpyToSymbol(eye, &hostEye, sizeof(cudaCoordinates));
+    cudaMemcpyToSymbol(forward, &hostForward, sizeof(cudaCoordinates));
+    cudaMemcpyToSymbol(right, &hostRight, sizeof(cudaCoordinates));
+    cudaMemcpyToSymbol(up, &hostUp, sizeof(cudaCoordinates));
     // Allocate memory for the cudaImage structure on the device
     cudaImage *deviceImage;
     cudaError_t status = cudaMalloc((void**)&deviceImage, sizeof(cudaImage));
