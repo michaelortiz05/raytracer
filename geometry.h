@@ -39,30 +39,6 @@ struct Point {
     }
 };
 
-// // CUDA compatible point
-// struct cudaPoint {
-//     double x = 0.0;
-//     double y = 0.0;
-//     double z = 0.0;
-
-//     __host__ __device__ cudaPoint operator+(const cudaPoint &p) const {
-//         return Point{x + p.x, y + p.y, z + p.z};
-//     }
-
-//     __host__ __device__ cudaPoint operator-(const cudaPoint &p) const {
-//         return Point{x - p.x, y - p.y, z - p.z};
-//     }
-
-//     __host__ __device__ cudaPoint operator*(double scalar) const {
-//         return Point{x * scalar, y * scalar, z * scalar};
-//     }
-
-//     // Removed error handling for division by zero for CUDA compatibility
-//     __host__ __device__ cudaPoint operator/(double scalar) const {
-//         return Point{x / scalar, y / scalar, z / scalar};
-//     }
-// };
-
 // vector class definining a vector and vector operations
 class Vector {
     private:
@@ -94,12 +70,48 @@ class Vector {
 };
 
 // cuda coordinates
-struct __host__ __device__ cudaCoordinates{
-    double x, y, z;
-};
+// struct __host__ __device__ cudaCoordinates{
+//     double x, y, z;
+// };
 
-// cuda magnitude computation
-double cudaMag(cudaCoordinates c);
+struct __host__ __device__ cudaCoordinates {
+    double x, y, z;
+
+    // Addition with another point
+    __host__ __device__ cudaCoordinates operator+(const cudaCoordinates& other) const {
+        return cudaCoordinates{x + other.x, y + other.y, z + other.z};
+    }
+
+    // Subtraction with another point
+    __host__ __device__ cudaCoordinates operator-(const cudaCoordinates& other) const {
+        return cudaCoordinates{x - other.x, y - other.y, z - other.z};
+    }
+
+    // Multiplication with a scalar
+    __host__ __device__ cudaCoordinates operator*(double scalar) const {
+        return cudaCoordinates{x * scalar, y * scalar, z * scalar};
+    }
+
+    // Division by a scalar
+    __host__ __device__ cudaCoordinates operator/(double scalar) const {
+        return cudaCoordinates{x / scalar, y / scalar, z / scalar}; // Note: No division by zero check
+    }
+
+    // Addition with a scalar
+    __host__ __device__ cudaCoordinates operator+(double scalar) const {
+        return cudaCoordinates{x + scalar, y + scalar, z + scalar};
+    }
+
+    // Subtraction with a scalar
+    __host__ __device__ cudaCoordinates operator-(double scalar) const {
+        return cudaCoordinates{x - scalar, y - scalar, z - scalar};
+    }
+
+    // Friend function for multiplication with a scalar (double * cudaCoordinates)
+    __host__ __device__ friend cudaCoordinates operator*(double scalar, const cudaCoordinates& coord) {
+        return cudaCoordinates{coord.x * scalar, coord.y * scalar, coord.z * scalar};
+    }
+};
 
 // RGB color struct
 struct __host__ __device__ Color {
@@ -126,6 +138,13 @@ struct Sun {
 struct __host__ __device__ cudaSun {
     cudaCoordinates direction;
     Color c;
+};
+
+// cuda Sphere
+struct cudaSphere {
+    cudaCoordinates c;
+    double r = 0.0;
+    Color color;
 };
 
 #endif

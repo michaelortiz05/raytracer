@@ -1,6 +1,7 @@
 #ifndef IMAGE_H
 #define IMAGE_H
 #include "math.h"
+#include <cfloat>
 #include <cuda_runtime.h>
 std::ostream& operator<<(std::ostream& out, const Color& c);
 
@@ -13,7 +14,6 @@ class Image {
         std::string name;
         Color currentColor;
         std::vector<unsigned char> png;
-        std::vector<Sphere> objects;
         Sun* currentSun;
         Point* eye;
         Vector* forward;
@@ -26,6 +26,7 @@ class Image {
     public:
         Image(int w = 0, int h = 0, std::string n = ""); 
         ~Image();
+        std::vector<Sphere> objects;
         int getHeight();
         Point* getEye();
         Vector* getForward();
@@ -51,13 +52,18 @@ struct cudaImage {
     int width;
     int height;
     double maxDim;
+    unsigned char* png;
     Color currentColor;
     cudaSun currentSun;
     cudaCoordinates eye;
     cudaCoordinates forward;
     cudaCoordinates right;
     cudaCoordinates up;
+    cudaSphere* spheres;
+    int numSpheres;
 };
+
+void __device__ convertLinearTosRGB(Color &c);
 
 // convert image to cuda compatible image
 void convertImageToCudaImage(Image &i, cudaImage &ci); // host
@@ -67,5 +73,20 @@ void convertSunToCudaSun(Sun &s, cudaSun &cs);
 
 // cuda raytracer setup
 void cudaRaytracer(cudaImage *ci);
+
+// cuda intersection
+struct __device__ cudaIntersection {
+    cudaCoordinates p;
+    double t = DBL_MAX;
+    bool found = false;
+    Color c;
+    cudaCoordinates center;
+};
+
+// cuda get collisions
+cudaIntersection __device__ getSphereCollision(cudaCoordinates &origin, cudaCoordinates &direction);
+
+// cuda kernel
+__global__ void castRaysKernel(cudaImage* image);
 
 #endif

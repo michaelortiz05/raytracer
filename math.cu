@@ -78,7 +78,6 @@ Vector::Vector(double xPos, double yPos, double zPos) : x{xPos}, y{yPos}, z{zPos
 // Vector constructor from a point
 Vector::Vector(const Point &p): Vector(p.x, p.y, p.z) {}
 
-
 // x getter                                                                     
 double Vector::getX() const {
     return x;
@@ -102,11 +101,6 @@ void Vector::print() const {
 // return the magnitude of the vector
 double Vector::mag() const {
     return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2));
-}
-
-// compute mag of cuda coordinates
-double cudaMag(cudaCoordinates c) {
-    return sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
 }
 
 // normalize vector
@@ -143,10 +137,9 @@ Vector computeSphereNormal(const Point &p1, const Point &c) {
     return normal;
 }
 
-// Helper swap function
-void swap(auto &a, auto &b) {
-    auto temp = a;
-    a = b;
-    b = temp;
-}
+// CUDA LOGIC
+
+
+
+
 

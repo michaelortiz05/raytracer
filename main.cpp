@@ -86,12 +86,16 @@ int main(int argc, char *argv[]) {
         }
         
     }
-    img->printObjects();
-    img->castRays();
+    // img->printObjects();
+    // img->castRays();
     cudaImage ci;
     convertImageToCudaImage(*img, ci);
+    cudaRaytracer(&ci);
+    // for (int i = 0; i < (ci.height * ci.width * 4); i++) {
+    //    std::cout << ci.png[i] <<  " ";
+    // }
     if (img->getName() != "") {
-        unsigned error = lodepng::encode(img->getName(), img->getPng(), img->getWidth(), img->getHeight());
+        unsigned error = lodepng::encode(img->getName(), ci.png, img->getWidth(), img->getHeight());
         if(error) std::cout << "encoder error " << error << ": "<< lodepng_error_text(error) << std::endl;
     }
     delete img;
