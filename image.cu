@@ -234,8 +234,8 @@ void Image::castRays() {
 }
 
 // cuda cast rays
-__global__ void castRaysKernel(cudaImage* image) {
-    const int sharedSpheresCount = 64; // Adjust based on available shared memory
+__global__ void castRaysKernel(unsigned char *png, cudaSphere *spheres) {
+    const int sharedSpheresCount = 32; // Adjust based on available shared memory
     __shared__ cudaSphere sharedSpheres[sharedSpheresCount];
 
     int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -243,8 +243,8 @@ __global__ void castRaysKernel(cudaImage* image) {
 
     if (x >= width || y >= height) return;
 
-    double sx = (2.0 * x - width) / image->maxDim;
-    double sy = (height - 2.0 * y) / image->maxDim;
+    double sx = (2.0 * x - width) / maxDim;
+    double sy = (height - 2.0 * y) / maxDim;
     cudaCoordinates direction = forward + sx * right + sy * up;
     cudaNormalize(direction);
 
@@ -258,7 +258,7 @@ __global__ void castRaysKernel(cudaImage* image) {
         // Load a chunk of spheres into shared memory
         int loadIndex = threadIdx.x + threadIdx.y * blockDim.x;
         if (loadIndex < sharedSpheresCount && (i + loadIndex) < numSpheres) {
-            sharedSpheres[loadIndex] = image->spheres[i + loadIndex];
+            sharedSpheres[loadIndex] = spheres[i + loadIndex];
         }
         __syncthreads();
 
@@ -277,19 +277,19 @@ __global__ void castRaysKernel(cudaImage* image) {
     if (closestIntersection.found) {
         cudaCoordinates normal = cudaComputeSphereNormal(closestIntersection.p, closestIntersection.center);
         // Note: cudaIsInShadow now checks against the sharedSpheres
-        if (!cudaIsInShadow(sharedSpheres, min(sharedSpheresCount, image->numSpheres), constSun, closestIntersection.p)) {
-            cudaComputeColor(sharedSpheres, min(sharedSpheresCount, image->numSpheres), constSun, normal, closestIntersection.c, closestIntersection.p, eye);
-            cudaColorPixel(image->png, width, height, x, y, closestIntersection.c);
+        if (!cudaIsInShadow(sharedSpheres, min(sharedSpheresCount, numSpheres), constSun, closestIntersection.p)) {
+            cudaComputeColor(sharedSpheres, min(sharedSpheresCount, numSpheres), constSun, normal, closestIntersection.c, closestIntersection.p, eye);
+            cudaColorPixel(png, width, height, x, y, closestIntersection.c);
         } else {
             // Handle the case where the point is in shadow
             Color c = {0.0,0.0,0.0,0.0};
-            cudaColorPixel(image->png, width, height, x, y, c);
+            cudaColorPixel(png, width, height, x, y, c);
         }
     }
 }
 
 void cudaRaytracer(cudaImage *hostImage) {
-    const int BLOCK_SIZE = 16;
+    const int BLOCK_SIZE = 8;
     cudaSun hostSun;
     int hostHeight = hostImage->height;
     int hostWidth = hostImage->width;
@@ -312,27 +312,27 @@ void cudaRaytracer(cudaImage *hostImage) {
     cudaMemcpyToSymbol(right, &hostRight, sizeof(cudaCoordinates));
     cudaMemcpyToSymbol(up, &hostUp, sizeof(cudaCoordinates));
     // Allocate memory for the cudaImage structure on the device
-    cudaImage *deviceImage;
-    cudaError_t status = cudaMalloc((void**)&deviceImage, sizeof(cudaImage));
-    if (status != cudaSuccess) {
-        std::cerr << "cudaMalloc failed for deviceImage: " << cudaGetErrorString(status) << std::endl;
-        return;
-    }
+    // cudaImage *deviceImage;
+    // cudaError_t status = cudaMalloc((void**)&deviceImage, sizeof(cudaImage));
+    // if (status != cudaSuccess) {
+    //     std::cerr << "cudaMalloc failed for deviceImage: " << cudaGetErrorString(status) << std::endl;
+    //     return;
+    // }
 
-    // Copy the cudaImage structure from host to device
-    status = cudaMemcpy(deviceImage, hostImage, sizeof(cudaImage), cudaMemcpyHostToDevice);
-    if (status != cudaSuccess) {
-        std::cerr << "cudaMemcpy failed for deviceImage: " << cudaGetErrorString(status) << std::endl;
-        cudaFree(deviceImage);
-        return;
-    }
+    // // Copy the cudaImage structure from host to device
+    // status = cudaMemcpy(deviceImage, hostImage, sizeof(cudaImage), cudaMemcpyHostToDevice);
+    // if (status != cudaSuccess) {
+    //     std::cerr << "cudaMemcpy failed for deviceImage: " << cudaGetErrorString(status) << std::endl;
+    //     cudaFree(deviceImage);
+    //     return;
+    // }
 
     // Allocate memory for the spheres array on the device
     cudaSphere* deviceSpheres;
-    status = cudaMalloc((void**)&deviceSpheres, hostImage->numSpheres * sizeof(cudaSphere));
+    cudaError_t status = cudaMalloc((void**)&deviceSpheres, hostImage->numSpheres * sizeof(cudaSphere));
     if (status != cudaSuccess) {
         std::cerr << "cudaMalloc failed for deviceSpheres: " << cudaGetErrorString(status) << std::endl;
-        cudaFree(deviceImage);
+        // cudaFree(deviceImage);
         return;
     }
 
@@ -341,18 +341,18 @@ void cudaRaytracer(cudaImage *hostImage) {
     if (status != cudaSuccess) {
         std::cerr << "cudaMemcpy failed for deviceSpheres: " << cudaGetErrorString(status) << std::endl;
         cudaFree(deviceSpheres);
-        cudaFree(deviceImage);
+        // cudaFree(deviceImage);
         return;
     }
 
-    // Update the spheres pointer in the device cudaImage struct
-    status = cudaMemcpy(&(deviceImage->spheres), &deviceSpheres, sizeof(cudaSphere*), cudaMemcpyHostToDevice);
-    if (status != cudaSuccess) {
-        std::cerr << "cudaMemcpy to update deviceImage->spheres failed: " << cudaGetErrorString(status) << std::endl;
-        cudaFree(deviceSpheres);
-        cudaFree(deviceImage);
-        return;
-    }
+    // // Update the spheres pointer in the device cudaImage struct
+    // status = cudaMemcpy(&(deviceImage->spheres), &deviceSpheres, sizeof(cudaSphere*), cudaMemcpyHostToDevice);
+    // if (status != cudaSuccess) {
+    //     std::cerr << "cudaMemcpy to update deviceImage->spheres failed: " << cudaGetErrorString(status) << std::endl;
+    //     cudaFree(deviceSpheres);
+    //     // cudaFree(deviceImage);
+    //     return;
+    // }
 
     // Allocate memory for the png array on the device
     unsigned char *devicePng;
@@ -360,7 +360,7 @@ void cudaRaytracer(cudaImage *hostImage) {
     if (status != cudaSuccess) {
         std::cerr << "cudaMalloc failed for devicePng: " << cudaGetErrorString(status) << std::endl;
         cudaFree(deviceSpheres);
-        cudaFree(deviceImage);
+        // cudaFree(deviceImage);
         return;
     }
 
@@ -370,19 +370,19 @@ void cudaRaytracer(cudaImage *hostImage) {
         std::cerr << "cudaMemcpy failed for devicePng: " << cudaGetErrorString(status) << std::endl;
         cudaFree(deviceSpheres);
         cudaFree(devicePng);
-        cudaFree(deviceImage);
+        // cudaFree(deviceImage);
         return;
     }
 
     // Update the png pointer in the device cudaImage struct
-    status = cudaMemcpy(&(deviceImage->png), &devicePng, sizeof(unsigned char*), cudaMemcpyHostToDevice);
-    if (status != cudaSuccess) {
-        std::cerr << "cudaMemcpy to update deviceImage->png failed: " << cudaGetErrorString(status) << std::endl;
-        cudaFree(deviceSpheres);
-        cudaFree(devicePng);
-        cudaFree(deviceImage);
-        return;
-    }
+    // status = cudaMemcpy(&(deviceImage->png), &devicePng, sizeof(unsigned char*), cudaMemcpyHostToDevice);
+    // if (status != cudaSuccess) {
+    //     std::cerr << "cudaMemcpy to update deviceImage->png failed: " << cudaGetErrorString(status) << std::endl;
+    //     cudaFree(deviceSpheres);
+    //     cudaFree(devicePng);
+    //     // cudaFree(deviceImage);
+    //     return;
+    // }
 
     // Setup the execution configuration
     dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
@@ -390,7 +390,7 @@ void cudaRaytracer(cudaImage *hostImage) {
                    (hostImage->height + BLOCK_SIZE - 1) / BLOCK_SIZE);
 
     // Launch the kernel
-    castRaysKernel<<<numBlocks, threadsPerBlock>>>(deviceImage);
+    castRaysKernel<<<numBlocks, threadsPerBlock>>>(devicePng, deviceSpheres);
     
     // Wait for kernel to finish
     cudaDeviceSynchronize();
@@ -405,7 +405,7 @@ void cudaRaytracer(cudaImage *hostImage) {
 
     // Free device memory
     cudaFree(deviceSpheres);
-    cudaFree(deviceImage);
+    // cudaFree(deviceImage);
     cudaFree(devicePng);
 }
 
