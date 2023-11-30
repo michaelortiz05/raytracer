@@ -219,25 +219,80 @@ void Image::castRays() {
 
 // cuda cast rays
 __global__ void castRaysKernel(cudaImage* image) {
+    const int sharedSpheresCount = 64; // Adjust based on available shared memory
+    __shared__ cudaSphere sharedSpheres[sharedSpheresCount];
+
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (x >= image->width || y >= image->height)
-        return;
+    if (x >= image->width || y >= image->height) return;
 
     double sx = (2.0 * x - image->width) / image->maxDim;
     double sy = (image->height - 2.0 * y) / image->maxDim;
     cudaCoordinates direction = image->forward + sx * image->right + sy * image->up;
     cudaNormalize(direction);
-    cudaCoordinates rayOrigin = image->eye; // Ray ray = Ray{*eye, direction};
-    cudaIntersection intersection = cudaGetSphereCollision(image->spheres, image->numSpheres, rayOrigin, direction);    
-    if (intersection.found == true && intersection.t > 0.0)
-    {
-        cudaCoordinates normal = cudaComputeSphereNormal(intersection.p, intersection.center);
-        cudaComputeColor(image->spheres, image->numSpheres, image->currentSun, normal, intersection.c, intersection.p, image->eye);// image->computeColor(normal, intersection.c, intersection.p);
-        cudaColorPixel(image->png, image->width, image->height, x, y, intersection.c); // color pixel
+
+    cudaCoordinates rayOrigin = image->eye;
+    cudaIntersection closestIntersection;
+    closestIntersection.found = false;
+    closestIntersection.t = DBL_MAX;
+
+    // Iterate over chunks of spheres
+    for (int i = 0; i < image->numSpheres; i += sharedSpheresCount) {
+        // Load a chunk of spheres into shared memory
+        int loadIndex = threadIdx.x + threadIdx.y * blockDim.x;
+        if (loadIndex < sharedSpheresCount && (i + loadIndex) < image->numSpheres) {
+            sharedSpheres[loadIndex] = image->spheres[i + loadIndex];
+        }
+        __syncthreads();
+
+        // Check for intersections with spheres in shared memory
+        int chunkSize = min(sharedSpheresCount, image->numSpheres - i);
+        cudaIntersection intersection = cudaGetSphereCollision(sharedSpheres, chunkSize, rayOrigin, direction);
+
+        // Update closest intersection if needed
+        if (intersection.found && intersection.t < closestIntersection.t) {
+            closestIntersection = intersection;
+        }
+        __syncthreads();
+    }
+
+    // Use the closest intersection found for coloring the pixel
+    if (closestIntersection.found) {
+        cudaCoordinates normal = cudaComputeSphereNormal(closestIntersection.p, closestIntersection.center);
+        // Note: cudaIsInShadow now checks against the sharedSpheres
+        if (!cudaIsInShadow(sharedSpheres, min(sharedSpheresCount, image->numSpheres), image->currentSun, closestIntersection.p)) {
+            cudaComputeColor(sharedSpheres, min(sharedSpheresCount, image->numSpheres), image->currentSun, normal, closestIntersection.c, closestIntersection.p, image->eye);
+            cudaColorPixel(image->png, image->width, image->height, x, y, closestIntersection.c);
+        } else {
+            // Handle the case where the point is in shadow
+            Color c = {0.0,0.0,0.0,0.0};
+            cudaColorPixel(image->png, image->width, image->height, x, y, c);
+        }
     }
 }
+
+
+// __global__ void castRaysKernel(cudaImage* image) {
+//     int x = blockIdx.x * blockDim.x + threadIdx.x;
+//     int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+//     if (x >= image->width || y >= image->height)
+//         return;
+
+//     double sx = (2.0 * x - image->width) / image->maxDim;
+//     double sy = (image->height - 2.0 * y) / image->maxDim;
+//     cudaCoordinates direction = image->forward + sx * image->right + sy * image->up;
+//     cudaNormalize(direction);
+//     cudaCoordinates rayOrigin = image->eye; // Ray ray = Ray{*eye, direction};
+//     cudaIntersection intersection = cudaGetSphereCollision(image->spheres, image->numSpheres, rayOrigin, direction);    
+//     if (intersection.found == true && intersection.t > 0.0)
+//     {
+//         cudaCoordinates normal = cudaComputeSphereNormal(intersection.p, intersection.center);
+//         cudaComputeColor(image->spheres, image->numSpheres, image->currentSun, normal, intersection.c, intersection.p, image->eye);// image->computeColor(normal, intersection.c, intersection.p);
+//         cudaColorPixel(image->png, image->width, image->height, x, y, intersection.c); // color pixel
+//     }
+// }
 
 void cudaRaytracer(cudaImage *hostImage) {
     const int BLOCK_SIZE = 16;
