@@ -115,10 +115,10 @@ struct __host__ __device__ cudaCoordinates {
 
 // RGB color struct
 struct __host__ __device__ Color {
-    double r = 1.0;
-    double g = 1.0;
-    double b = 1.0;
-    double alpha = 1.0;
+    double r;
+    double g;
+    double b;
+    double alpha;
 };
 
 // Sphere with center c, radius r, and a color

@@ -2,8 +2,10 @@
 #include "math.h"
 #include <cmath>
 /*******CUDA*********/
+__constant__ cudaSun constSun;
+
 // compute mag of cuda coordinates
-double __device__ cudaMag(cudaCoordinates &c) {
+double __host__  __device__ cudaMag(cudaCoordinates &c) {
     return sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
 }
 // cuda clamp
@@ -23,11 +25,17 @@ void __device__ cudaConvertLinearTosRGB(Color &c)
 }
 
 // normalize cudaCoordinates
-void __device__ cudaNormalize(cudaCoordinates &c) {
+void __host__  __device__ cudaNormalize(cudaCoordinates &c) {
     double mag = cudaMag(c);
     c.x /= mag;
     c.y /= mag;
     c.z /= mag;
+}
+
+cudaCoordinates __device__ cudaNormalizev(cudaCoordinates &c) {
+    double mag = cudaMag(c);
+    cudaCoordinates cn = {c.x /= mag, c.y /= mag, c.z /= mag};
+    return cn;
 }
 
 // cuda dot
@@ -84,7 +92,7 @@ void __device__ cudaComputeColor(cudaSphere* spheres, int numSpheres, cudaSun& c
         cudaNormalize(eyeDir);
         if (cudaDot(eyeDir, normal) > 0.0)
             normal = normal * -1;
-        cudaNormalize(currentSun.direction);// currentSun->direction.normalize();
+        // currentSun->direction.normalize();
         double lambert = max(cudaDot(normal, currentSun.direction), 0.0);
         c.r *= lambert * currentSun.c.r;
         c.g *= lambert * currentSun.c.g;
@@ -261,8 +269,8 @@ __global__ void castRaysKernel(cudaImage* image) {
     if (closestIntersection.found) {
         cudaCoordinates normal = cudaComputeSphereNormal(closestIntersection.p, closestIntersection.center);
         // Note: cudaIsInShadow now checks against the sharedSpheres
-        if (!cudaIsInShadow(sharedSpheres, min(sharedSpheresCount, image->numSpheres), image->currentSun, closestIntersection.p)) {
-            cudaComputeColor(sharedSpheres, min(sharedSpheresCount, image->numSpheres), image->currentSun, normal, closestIntersection.c, closestIntersection.p, image->eye);
+        if (!cudaIsInShadow(sharedSpheres, min(sharedSpheresCount, image->numSpheres), constSun, closestIntersection.p)) {
+            cudaComputeColor(sharedSpheres, min(sharedSpheresCount, image->numSpheres), constSun, normal, closestIntersection.c, closestIntersection.p, image->eye);
             cudaColorPixel(image->png, image->width, image->height, x, y, closestIntersection.c);
         } else {
             // Handle the case where the point is in shadow
@@ -296,7 +304,11 @@ __global__ void castRaysKernel(cudaImage* image) {
 
 void cudaRaytracer(cudaImage *hostImage) {
     const int BLOCK_SIZE = 16;
-
+    cudaSun hostSun;
+    hostSun.direction = hostImage->currentSun.direction;
+    hostSun.c = hostImage->currentSun.c;
+    cudaNormalize(hostSun.direction);
+    cudaMemcpyToSymbol(constSun, &hostSun, sizeof(cudaSun));
     // Allocate memory for the cudaImage structure on the device
     cudaImage *deviceImage;
     cudaError_t status = cudaMalloc((void**)&deviceImage, sizeof(cudaImage));
