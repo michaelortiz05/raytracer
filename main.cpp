@@ -108,6 +108,11 @@ int main(int argc, char *argv[])
         std::cout << "Elapsed time (threads=" << i << ") = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
     }
 
+    begin = std::chrono::steady_clock::now();
+    img->castRays_parallel();
+    end = std::chrono::steady_clock::now();
+    std::cout << "Elapsed time (openMP) = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
+
     // begin = std::chrono::steady_clock::now();
     // img->castRays_threaded(2);
     // end = std::chrono::steady_clock::now();
