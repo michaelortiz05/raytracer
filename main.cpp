@@ -100,63 +100,41 @@ int main(int argc, char *argv[])
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::cout << "Elapsed time (serial) = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
 
-    for (int i = 2; i <= 16; ++i)
-    {
-        begin = std::chrono::steady_clock::now();
-        img->castRays_threaded(i);
-        end = std::chrono::steady_clock::now();
-        std::cout << "Elapsed time (threads=" << i << ") = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
-    }
+    // for (int i = 2; i <= 16; ++i)
+    // {
+    //     begin = std::chrono::steady_clock::now();
+    //     img->castRays_threaded(i);
+    //     end = std::chrono::steady_clock::now();
+    //     std::cout << "Elapsed time (threads=" << i << ") = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
+    // }
 
-    begin = std::chrono::steady_clock::now();
-    img->castRays_parallel();
-    end = std::chrono::steady_clock::now();
-    std::cout << "Elapsed time (openMP) = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
+
 
     // begin = std::chrono::steady_clock::now();
     // img->castRays_threaded(2);
     // end = std::chrono::steady_clock::now();
     // std::cout << "Elapsed time (threads=2) = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
 
-    // begin = std::chrono::steady_clock::now();
-    // img->castRays_threaded(4);
-    // end = std::chrono::steady_clock::now();
-    // std::cout << "Elapsed time (threads=4) = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
+    begin = std::chrono::steady_clock::now();
+    img->castRays_threaded(4);
+    end = std::chrono::steady_clock::now();
+    std::cout << "Elapsed time (threads=4) = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
 
     // begin = std::chrono::steady_clock::now();
     // img->castRays_threaded(8);
     // end = std::chrono::steady_clock::now();
     // std::cout << "Elapsed time (threads=8) = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
 
-    // begin = std::chrono::steady_clock::now();
-    // img->castRays_threaded(16);
-    // end = std::chrono::steady_clock::now();
-    // std::cout << "Elapsed time (threads=16) = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
+    begin = std::chrono::steady_clock::now();
+    img->castRays_threaded(16);
+    end = std::chrono::steady_clock::now();
+    std::cout << "Elapsed time (threads=16) = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
 
-    // begin = std::chrono::steady_clock::now();
-    // img->castRays_threaded(32);
-    // end = std::chrono::steady_clock::now();
-    // std::cout << "Elapsed time (threads=32) = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
 
-    // begin = std::chrono::steady_clock::now();
-    // img->castRays_threaded(64);
-    // end = std::chrono::steady_clock::now();
-    // std::cout << "Elapsed time (threads=64) = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
-
-    // begin = std::chrono::steady_clock::now();
-    // img->castRays_threaded(128);
-    // end = std::chrono::steady_clock::now();
-    // std::cout << "Elapsed time (threads=128) = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
-
-    // begin = std::chrono::steady_clock::now();
-    // img->castRays_threaded(256);
-    // end = std::chrono::steady_clock::now();
-    // std::cout << "Elapsed time (threads=256) = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
-
-    // begin = std::chrono::steady_clock::now();
-    // img->castRays_parallel();
-    // end = std::chrono::steady_clock::now();
-    // std::cout << "Elapsed time (openMP) = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
+    begin = std::chrono::steady_clock::now();
+    img->castRays_parallel();
+    end = std::chrono::steady_clock::now();
+    std::cout << "Elapsed time (openMP) = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[μs]" << std::endl;
 
     if (img->getName() != "")
     {
